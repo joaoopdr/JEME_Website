@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-brand-primary: #C21A27;
+  --color-brand-muted:   #615F59;
+  --color-brand-danger:  #790E17;
+  --color-brand-text:    #1D1D1B;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Disable browser-default smooth-scroll; we control scroll ourselves */
+  scroll-behavior: auto;
+}
+
+body {
+  color: var(--color-brand-text);
+  background: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
