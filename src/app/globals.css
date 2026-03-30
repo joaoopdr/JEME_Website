@@ -4,9 +4,9 @@
 
 :root {
   --color-brand-primary: #C21A27;
-  --color-brand-muted:   #615F59;
-  --color-brand-danger:  #790E17;
-  --color-brand-text:    #1D1D1B;
+  --color-brand-muted: #615F59;
+  --color-brand-danger: #790E17;
+  --color-brand-text: #1D1D1B;
 }
 
 *,
@@ -16,7 +16,6 @@
 }
 
 html {
-  /* Disable browser-default smooth-scroll; we control scroll ourselves */
   scroll-behavior: auto;
 }
 
@@ -25,4 +24,15 @@ body {
   background: #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html.intro-scrollbar-hidden,
+body.intro-scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html.intro-scrollbar-hidden::-webkit-scrollbar,
+body.intro-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }
