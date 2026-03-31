@@ -55,50 +55,51 @@ transform-origin so the M stays anchored as the logo scales up.
 A scroll-progress-driven component built around a **sticky inner viewport**
 inside a tall outer spacer div.
 
-**Layer stack (bottom → top):**
-1. Team photograph — subtle zoom (1.0 → 1.06) during scroll for cinematic depth
-2a. Static ambient shadow — radial gradient always present, grounds logo in scene
-2b. Radial vignette overlay — dark edges / lighter centre, animated by scroll
-3. Brand-red fill overlay (fades in to solid red)
-4. Logo (scales up toward M, then fades out; drop-shadow filter on wrapper)
-5. First content section (eyebrow + headline + paragraph, fades up over red)
+**Layer stack (bottom → top) — v5:**
+1.  Team photograph — static x/y offset; scroll-driven scale (1.06 → 1.12)
+2.  Radial vignette — spotlight (dark edges, light centre), scroll-animated
+3.  Brand-red fill — scroll-animated
+4.  Logo (outer positioning div, no filter)
+      └── motion.div — scale + opacity + transformOrigin (ALL copies share these)
+            ├── A: far shadow img    — `blur(20px) brightness(0)` offset down, opacity 0.60
+            ├── B: contact shadow img — `blur(4px) brightness(0)` offset down, opacity 0.70
+            ├── C: main logo img     — `brightness(1.08) contrast(1.05)`, positions container
+            └── D: highlight img    — `blur(8px) brightness(2.5)` offset up, opacity 0.14
+5.  Content reveal (opacity + y)
 
-**Scroll phases (progress 0 → 1):**
+**Why directional offsets matter (v6):** Previous copies had Y offsets of 3–6px on a logo rendered at ~410px wide. `6/410 = 1.5%` of logo width — entirely absorbed by the blur radius and photo texture noise. The shadow shape mostly hid behind the main logo. Only a narrow fringed edge was ever exposed, and it read as a CSS artifact rather than spatial depth.
 
-| Phase             | Range      | What happens                                         |
-|-------------------|------------|------------------------------------------------------|
-| Vignette in       | 0 → 0.55   | Radial vignette fades to full; edges darken, centre stays light |
-| Red fill begin    | 0.40       | Brand red starts fading in                           |
-| Logo zoom         | 0 → 0.65   | Logo scales 1× → 18×                                |
-| Logo fade-out     | 0.45 → 0.65| Logo opacity drops to 0 as red fills screen          |
-| Red fill complete | 0.70       | Screen is solid brand red                            |
-| Content reveal    | 0.72 → 1.0 | Eyebrow + headline + paragraph fade up 60 px         |
+**v6 approach:** Shadow offsets are 8–14px Y + 2–4px X. At 410px wide, 14px = 3.4% of width — clearly visible. More importantly, the shadow center lands 14px *below* the letterform base, and with 28px blur extending the dark zone ~42px further, there is a clearly perceptible dark region on the lower-right side of every letterform. The 8px contact shadow exposes a tight crisp ledge before blur softens it. The highlight shifted -6px up / -2px left creates a contrasting lit edge. Light direction is unambiguous.
 
-**Logo positioning (revised v2):**
-- Uses `top: logoMarkScreenY%` + `translateY(-logoMarkInSvgY%)` on the outer wrapper
-- This anchors the M mark itself (not the logo baseline) to `logoMarkScreenY` = 75% from top
-- Works correctly at all screen sizes since `%` translateY is relative to the element height
-- Previous `bottom: 25%` anchored the logo *baseline*, placing the M mark ~47% from bottom (too high)
+**Logo positioning (v6):** `logoMarkScreenY: 75`, `vignetteCenter: '54% 75%'`
 
 ### Config: `src/components/HeroIntro/config.ts`
 
-All tunable values live here. Key constants after v2 refinement:
-
 ```ts
-scrollHeightVh:        300    // Total section height — controls pace
-logoMarkScreenY:       75     // M mark target: % from top of viewport (75 = 25% from bottom)
-logoMarkInSvgY:        45     // M mark position in SVG: % from top of viewBox
-logoMarkInSvgX:        '58%'  // M mark position in SVG: % from left of viewBox
-logoMaxScale:          18     // Maximum zoom factor (was 10)
-vignetteCenter:        '54% 75%' // Spotlight centre — matches M mark screen position
-vignetteEdgeOpacity:   0.85   // How dark the surrounding areas get
-vignetteCenterOpacity: 0.10   // Minimal darkening at the logo centre
-logoShadowSize:        '45% 32%' // Ambient shadow ellipse size
-logoShadowOpacity:     0.42   // Ambient shadow darkness
-logoDropShadowBlur:    28     // Logo drop-shadow blur radius (px)
-logoDropShadowOpacity: 0.28   // Logo drop-shadow alpha
-imageScaleMax:         1.06   // Max photo scale during zoom (subtle parallax)
-contentRevealStartY:   60     // px the content starts below its final position
+// *** LOGO POSITION ***
+logoMarkScreenY:              75   // % from viewport TOP — also update vignetteCenter Y
+
+// Shadow — far (soft cast, establishes floating presence)
+logoShadowFarOffsetX:          4   // px right  → more directional: 8
+logoShadowFarOffsetY:         14   // px down   → more depth: 20, 24
+logoShadowFarBlur:            28   // px        → wider: 40 | tighter: 16
+logoShadowFarOpacity:       0.75   // 0–1       → stronger: 0.90 | weaker: 0.45
+
+// Shadow — contact (tight cast, primary lift signal)
+logoShadowContactOffsetX:      2   // px right
+logoShadowContactOffsetY:      8   // px down   → sharper lift: 10, 12
+logoShadowContactBlur:         3   // px        → sharper: 1 | softer: 6
+logoShadowContactOpacity:   0.80   // 0–1       → stronger: 0.95 | weaker: 0.50
+
+// Highlight (rim light on upper-left surfaces)
+logoHighlightOffsetX:         -2   // px left   → more directional: -4
+logoHighlightOffsetY:         -6   // px up     → higher: -10
+logoHighlightBlur:             6   // px        → softer bloom: 12
+logoHighlightOpacity:       0.22   // 0–1       → stronger: 0.35 | disable: 0
+
+logoBrightness:             1.08
+logoContrast:               1.05
+imageScaleMax:              1.12
 ```
 
 ---
@@ -120,14 +121,15 @@ then transitions to white for body copy. This is placeholder content only.
 ## Refinement Priorities (Next Steps)
 
 ### High priority
-1. **Typography** — Consider pairing Inter with a serif (e.g. Cormorant Garamond
+1. **Logo position testing** — `logoMarkScreenY: 25` is the current starting point.
+   Test other values: `20` (very high), `35` (upper-mid), `50` (centre).
+   Remember to update `vignetteCenter` Y to match whenever this changes.
+2. **Typography** — Consider pairing Inter with a serif (e.g. Cormorant Garamond
    or Playfair Display) for headings to elevate the premium feel.
-2. **Logo position on mobile** — Test `logoMarkScreenY: 75` on real devices;
-   may need a higher value (e.g. 80) on smaller screens where the logo is 72vw.
-3. **Vignette tuning** — `vignetteCenter` uses a fixed `'54% 75%'` that averages
-   desktop and mobile M positions. Could be made responsive via CSS custom props.
-4. **Image focal point** — Confirm `object-position` on the team photo once the
-   preferred crop/composition direction is decided.
+3. **Logo position on mobile** — The logo is 72vw on mobile; M mark may land
+   differently than on desktop. May need responsive `logoMarkScreenY` adjustments.
+4. **Image focal point** — Confirm `object-position` and `imageOffsetX/Y` once
+   the preferred photo composition is decided.
 
 ### Medium priority
 5. **Navigation** — A top nav that fades in after the intro; should appear fixed
