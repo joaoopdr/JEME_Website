@@ -66,13 +66,24 @@ export default function HeroIntro() {
     [0, C.imageDimMaxOpacity],
   );
 
-  const redOpacity   = useTransform(scrollYProgress, C.redFadeRange, [0, 1]);
+  const redOpacity   = useTransform(scrollYProgress, C.redFadeRange,    [0, 1]);
   const imageScale   = useTransform(scrollYProgress, C.imageScaleRange, [C.imageScaleStart, C.imageScaleMax]);
+
   // Piecewise non-linear scale — slow start, fast finish.
   // Input/output arrays define three segments of increasing slope.
   // See logoScaleProgress / logoScaleOutput in config.ts to tune.
-  const logoScale = useTransform(scrollYProgress, C.logoScaleProgress, C.logoScaleOutput);
-  const logoOpacity  = useTransform(scrollYProgress, C.logoFadeRange,   [1, 0]);
+  const logoScale   = useTransform(scrollYProgress, C.logoScaleProgress, C.logoScaleOutput);
+  const logoOpacity = useTransform(scrollYProgress, C.logoFadeRange,     [1, 0]);
+
+  // Vertical drift — logo travels upward as zoom progresses.
+  // Sits on a wrapper OUTSIDE the scale element so it is not amplified by zoom.
+  // '0vh' → '-Nvh': negative y = upward in CSS transform coordinates.
+  // Tune: logoVerticalShiftVh (distance) and logoVerticalShiftRange (timing).
+  const logoY = useTransform(
+    scrollYProgress,
+    C.logoVerticalShiftRange,
+    ['0vh', `-${C.logoVerticalShiftVh}vh`],
+  );
   const contentOpacity = useTransform(scrollYProgress, C.contentRevealRange, [0, 1]);
   const contentY       = useTransform(scrollYProgress, C.contentRevealRange, [C.contentRevealStartY, 0]);
 
@@ -160,6 +171,8 @@ export default function HeroIntro() {
             transform: `translateY(-${C.logoMarkInSvgY}%)`,
           }}
         >
+          {/* Vertical drift wrapper — outside the scale element so y is not zoom-amplified */}
+          <motion.div className="w-full flex justify-center" style={{ y: logoY }}>
           <motion.div
             className="relative w-[72vw] sm:w-[44vw] md:w-[32vw]"
             style={{
@@ -236,6 +249,7 @@ export default function HeroIntro() {
               }}
             />
 
+          </motion.div>
           </motion.div>
         </div>
 

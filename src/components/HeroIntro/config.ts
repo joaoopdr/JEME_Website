@@ -39,16 +39,33 @@ export const HERO_CONFIG = {
   //   progress  0.44 → 0.65 : scale  6.0 → 18    (fast  — diving into the M)
   //
   // To tune the curve:
-  //   → Slower early phase:    decrease logoScaleOutput[1] (e.g. 2.0)
-  //   → Faster early phase:    increase logoScaleOutput[1] (e.g. 3.5)
-  //   → Push acceleration later: increase logoScaleProgress[2] (e.g. 0.50)
+  //   → Slower early phase:       decrease logoScaleOutput[1] (e.g. 2.0)
+  //   → Faster early phase:       increase logoScaleOutput[1] (e.g. 3.5)
+  //   → Push acceleration later:  increase logoScaleProgress[2] (e.g. 0.50)
   //   → Pull acceleration earlier: decrease logoScaleProgress[2] (e.g. 0.38)
-  //   → Change final zoom:     change logoScaleOutput[3] (e.g. 22 for more, 14 for less)
-  //   → Extend total zoom range: increase logoScaleProgress[3] (e.g. 0.70)
+  //   → Change final zoom:        change logoScaleOutput[3] (e.g. 22 for more, 14 for less)
+  //   → Extend total zoom range:  increase logoScaleProgress[3] (e.g. 0.70)
   logoScaleProgress: [0,   0.22, 0.44, 0.65] as number[],
   logoScaleOutput:   [1,   2.5,  6,    18  ] as number[],
 
   logoFadeRange: [0.45, 0.65] as [number, number],
+
+  // ─── Logo vertical drift during zoom ───────────────────────────────────────
+  // As the user scrolls, the logo travels upward by logoVerticalShiftVh viewport
+  // height units. This happens on a separate wrapper outside the scale element,
+  // so the movement is not amplified by the zoom factor.
+  //
+  // Starting position is determined by logoMarkScreenY above (currently 75%).
+  // The logo drifts upward by logoVerticalShiftVh over logoVerticalShiftRange.
+  // At the default values, the M mark moves from ~75% to ~55% from top.
+  //
+  //   → More upward movement:  increase logoVerticalShiftVh (e.g. 30, 35)
+  //   → Less upward movement:  decrease logoVerticalShiftVh (e.g. 10, 8)
+  //   → Start drift later:     increase logoVerticalShiftRange[0] (e.g. 0.15)
+  //   → End drift earlier:     decrease logoVerticalShiftRange[1] (e.g. 0.50)
+  //   → Sync with zoom end:    set logoVerticalShiftRange[1] to match logoScaleProgress last value
+  logoVerticalShiftVh:    20,
+  logoVerticalShiftRange: [0, 0.65] as [number, number],
 
   // ─── Logo depth: layered shadow + highlight stack ──────────────────────────
   //
