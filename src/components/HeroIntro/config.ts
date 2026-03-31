@@ -31,9 +31,24 @@ export const HERO_CONFIG = {
   logoMarkInSvgX: '58%', // % from viewBox left
 
   // ─── Logo zoom ─────────────────────────────────────────────────────────────
-  logoMaxScale:   18,
-  logoScaleRange: [0, 0.65]    as [number, number],
-  logoFadeRange:  [0.45, 0.65] as [number, number],
+  // Piecewise scale mapping — progress keyframes paired with scale keyframes.
+  // Three segments of increasing slope create a slow-start / fast-finish curve:
+  //
+  //   progress  0.00 → 0.22 : scale  1.0 → 2.5   (slow  — full logo still visible)
+  //   progress  0.22 → 0.44 : scale  2.5 → 6.0   (medium — zooming in)
+  //   progress  0.44 → 0.65 : scale  6.0 → 18    (fast  — diving into the M)
+  //
+  // To tune the curve:
+  //   → Slower early phase:    decrease logoScaleOutput[1] (e.g. 2.0)
+  //   → Faster early phase:    increase logoScaleOutput[1] (e.g. 3.5)
+  //   → Push acceleration later: increase logoScaleProgress[2] (e.g. 0.50)
+  //   → Pull acceleration earlier: decrease logoScaleProgress[2] (e.g. 0.38)
+  //   → Change final zoom:     change logoScaleOutput[3] (e.g. 22 for more, 14 for less)
+  //   → Extend total zoom range: increase logoScaleProgress[3] (e.g. 0.70)
+  logoScaleProgress: [0,   0.22, 0.44, 0.65] as number[],
+  logoScaleOutput:   [1,   2.5,  6,    18  ] as number[],
+
+  logoFadeRange: [0.45, 0.65] as [number, number],
 
   // ─── Logo depth: layered shadow + highlight stack ──────────────────────────
   //

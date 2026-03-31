@@ -68,7 +68,10 @@ export default function HeroIntro() {
 
   const redOpacity   = useTransform(scrollYProgress, C.redFadeRange, [0, 1]);
   const imageScale   = useTransform(scrollYProgress, C.imageScaleRange, [C.imageScaleStart, C.imageScaleMax]);
-  const logoScale    = useTransform(scrollYProgress, C.logoScaleRange,  [1, C.logoMaxScale]);
+  // Piecewise non-linear scale — slow start, fast finish.
+  // Input/output arrays define three segments of increasing slope.
+  // See logoScaleProgress / logoScaleOutput in config.ts to tune.
+  const logoScale = useTransform(scrollYProgress, C.logoScaleProgress, C.logoScaleOutput);
   const logoOpacity  = useTransform(scrollYProgress, C.logoFadeRange,   [1, 0]);
   const contentOpacity = useTransform(scrollYProgress, C.contentRevealRange, [0, 1]);
   const contentY       = useTransform(scrollYProgress, C.contentRevealRange, [C.contentRevealStartY, 0]);
