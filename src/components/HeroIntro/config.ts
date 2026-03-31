@@ -64,8 +64,27 @@ export const HERO_CONFIG = {
   //   → Start drift later:     increase logoVerticalShiftRange[0] (e.g. 0.15)
   //   → End drift earlier:     decrease logoVerticalShiftRange[1] (e.g. 0.50)
   //   → Sync with zoom end:    set logoVerticalShiftRange[1] to match logoScaleProgress last value
-  logoVerticalShiftVh:    20,
-  logoVerticalShiftRange: [0, 0.65] as [number, number],
+  // Piecewise vertical drift — mirrors the zoom curve so upward movement
+  // stays proportional to zoom at every phase. Progress keyframes match the
+  // zoom segments; output is negative-vh values (negative = upward).
+  //
+  //   0.00 → 0.22 : 0 → -5vh    slow phase — restrained drift, logo stays readable
+  //   0.22 → 0.44 : -5 → -12vh  medium phase — noticeable lift
+  //   0.44 → 0.65 : -12 → -24vh fast phase  — accelerates upward with the zoom dive
+  //
+  // *** logoVerticalShiftProgress[3] controls how long the upward motion lasts ***
+  //   → Motion ends earlier:  decrease [3] (e.g. 0.55)
+  //   → Motion outlasts zoom: increase [3] (e.g. 0.70)
+  //
+  // To adjust the total upward travel, change the last output value (currently -24vh):
+  //   → More upward movement: increase magnitude (e.g. -30, -36)
+  //   → Less upward movement: decrease magnitude (e.g. -18, -14)
+  //
+  // To shift how drift is distributed between phases, change intermediate output values:
+  //   → More drift in slow phase:   increase magnitude of output[1] (e.g. -8)
+  //   → Less drift in slow phase:   decrease magnitude of output[1] (e.g. -3)
+  logoVerticalShiftProgress: [0,     0.22,  0.44,  0.65] as number[],
+  logoVerticalShiftOutput:   ['0vh', '-5vh', '-12vh', '-24vh'] as string[],
 
   // ─── Logo depth: layered shadow + highlight stack ──────────────────────────
   //

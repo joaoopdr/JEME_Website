@@ -76,13 +76,13 @@ export default function HeroIntro() {
   const logoOpacity = useTransform(scrollYProgress, C.logoFadeRange,     [1, 0]);
 
   // Vertical drift — logo travels upward as zoom progresses.
-  // Sits on a wrapper OUTSIDE the scale element so it is not amplified by zoom.
-  // '0vh' → '-Nvh': negative y = upward in CSS transform coordinates.
-  // Tune: logoVerticalShiftVh (distance) and logoVerticalShiftRange (timing).
+  // Piecewise mapping mirrors the zoom curve so drift stays proportional to zoom
+  // at every phase. Sits on a wrapper OUTSIDE the scale element so y is not
+  // amplified by the zoom factor. Tune in config: logoVerticalShiftProgress / Output.
   const logoY = useTransform(
     scrollYProgress,
-    C.logoVerticalShiftRange,
-    ['0vh', `-${C.logoVerticalShiftVh}vh`],
+    C.logoVerticalShiftProgress,
+    C.logoVerticalShiftOutput,
   );
   const contentOpacity = useTransform(scrollYProgress, C.contentRevealRange, [0, 1]);
   const contentY       = useTransform(scrollYProgress, C.contentRevealRange, [C.contentRevealStartY, 0]);
