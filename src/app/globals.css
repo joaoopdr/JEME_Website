@@ -17,6 +17,9 @@
 
 html {
   scroll-behavior: auto;
+  /* Dark background prevents white overscroll flash at the top of the page
+     (Mac elastic scroll / iOS rubber-band pull-up above position 0). */
+  background-color: #1d1d1b;
 }
 
 body {

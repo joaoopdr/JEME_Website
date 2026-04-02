@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { HERO_CONFIG as C } from './config';
@@ -8,27 +9,24 @@ import { HERO_CONFIG as C } from './config';
  * HeroIntro
  *
  * Scroll-driven sequence:
- *   1. Full-screen team photo (subtly scales as you scroll)
- *   2. Radial vignette builds a spotlight around the logo
+ *   1. Full-screen team photo — logo starts tilted forward (ground-plane perspective)
+ *   2. As user scrolls, logo straightens to upright; radial vignette builds
  *   3. Logo zooms into the M mark; red fills the screen
  *   4. First content section fades up over the red background
  *
  * Layer stack (bottom → top):
- *   1.  Team photograph — scroll-driven scale + static x/y offset
- *   2.  Radial vignette — scroll-animated spotlight
+ *   1.  Team photograph — Next.js Image (optimized, priority loaded), scroll-driven scale
+ *   2.  Radial vignette — scroll-animated spotlight (starts at partial opacity for contrast)
  *   3.  Brand-red fill — scroll-animated
- *   4.  Logo (outer positioning div)
- *         └── motion.div — scale + opacity + transformOrigin (all copies share)
- *               ├── A: far shadow     — brightness(0), blur 28px, offset (+4px, +14px)
- *               ├── B: contact shadow — brightness(0), blur 3px,  offset (+2px, +8px)
- *               ├── C: main logo      — relative (sizes container), brightness boost
- *               └── D: highlight      — brightness(3), blur 6px,   offset (-2px, -6px)
+ *   4.  Logo (outer positioning div + perspective context)
+ *         └── motion.div — rotateX (tilt → upright)
+ *               └── motion.div — y (vertical drift, outside scale)
+ *                     └── motion.div — scale + opacity + transformOrigin
+ *                           ├── A: far shadow
+ *                           ├── B: contact shadow
+ *                           ├── C: main logo
+ *                           └── D: highlight
  *   5.  Content reveal — opacity + y
- *
- * Depth approach: copies A and B are offset far enough below+right that their
- * dark shapes extend visibly past the main logo's lower-right edges.
- * Copy D offset up+left creates a contrasting lit edge on the opposite side.
- * Light direction reads as coming from upper-left.
  */
 export default function HeroIntro() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,8 +37,6 @@ export default function HeroIntro() {
   });
 
   // ── Scrollbar hide/show ───────────────────────────────────────────────────
-  // Calls applyScrollbarState immediately on mount (before any scroll fires)
-  // to ensure the correct state is set on first render/refresh.
   useEffect(() => {
     const applyScrollbarState = (value: number) => {
       const hide = value < C.contentRevealRange[0];
@@ -60,51 +56,72 @@ export default function HeroIntro() {
 
   // ── Derived motion values ─────────────────────────────────────────────────
 
+  // Vignette starts at imageDimInitialOpacity (not 0) so the logo has contrast
+  // against the raw photo before the user scrolls.
   const vignetteOpacity = useTransform(
     scrollYProgress,
     C.imageDimRange,
-    [0, C.imageDimMaxOpacity],
+    [C.imageDimInitialOpacity, C.imageDimMaxOpacity],
   );
 
-  const redOpacity   = useTransform(scrollYProgress, C.redFadeRange,    [0, 1]);
-  const imageScale   = useTransform(scrollYProgress, C.imageScaleRange, [C.imageScaleStart, C.imageScaleMax]);
+  const redOpacity = useTransform(scrollYProgress, C.redFadeRange,    [0, 1]);
+  const imageScale = useTransform(scrollYProgress, C.imageScaleRange, [C.imageScaleStart, C.imageScaleMax]);
 
   // Piecewise non-linear scale — slow start, fast finish.
-  // Input/output arrays define three segments of increasing slope.
-  // See logoScaleProgress / logoScaleOutput in config.ts to tune.
   const logoScale   = useTransform(scrollYProgress, C.logoScaleProgress, C.logoScaleOutput);
   const logoOpacity = useTransform(scrollYProgress, C.logoFadeRange,     [1, 0]);
 
-  // Vertical drift — logo travels upward as zoom progresses.
-  // Piecewise mapping mirrors the zoom curve so drift stays proportional to zoom
-  // at every phase. Sits on a wrapper OUTSIDE the scale element so y is not
-  // amplified by the zoom factor. Tune in config: logoVerticalShiftProgress / Output.
+  // Vertical drift — on a wrapper outside the scale element so y is not zoom-amplified.
   const logoY = useTransform(
     scrollYProgress,
     C.logoVerticalShiftProgress,
     C.logoVerticalShiftOutput,
   );
+
+  // Perspective tilt — logo starts lying forward, straightens as user scrolls.
+  // Framer Motion clamps by default: stays at 0deg once logoStraightenRange[1] is reached.
+  const logoRotateX = useTransform(
+    scrollYProgress,
+    C.logoStraightenRange,
+    [C.logoInitialRotateX, 0],
+  );
+
   const contentOpacity = useTransform(scrollYProgress, C.contentRevealRange, [0, 1]);
   const contentY       = useTransform(scrollYProgress, C.contentRevealRange, [C.contentRevealStartY, 0]);
 
   return (
+    // bg-black: prevents white overscroll flash when pulling upward past the top
+    // of the page (e.g. Mac elastic scroll / iOS rubber-band).
     <div
       ref={containerRef}
       style={{ height: `${C.scrollHeightVh}vh` }}
-      className="relative"
+      className="relative bg-black"
     >
       <div className="sticky top-0 h-screen overflow-hidden">
 
         {/* ── Layer 1: Team photograph ── */}
+        {/*
+          Next.js Image with fill + priority:
+          - priority: adds <link rel="preload"> in <head> and sets loading="eager"
+          - Hero images must NOT be lazy-loaded; they are above the fold.
+          - fill: renders position:absolute inset:0, fills the motion.div container.
+          - sizes="100vw": tells the browser this is always full-viewport-width,
+            enabling optimal srcset selection across breakpoints.
+          The motion.div parent has position:absolute, satisfying Image fill's
+          requirement for a non-static positioned container.
+        */}
         <motion.div
           className="absolute inset-0"
           style={{ scale: imageScale, x: C.imageOffsetX, y: C.imageOffsetY }}
         >
-          <img
+          <Image
             src="/images/team-hero.jpg"
             alt=""
-            className="absolute inset-0 h-full w-full object-cover object-center select-none pointer-events-none"
-            draggable={false}
+            fill
+            priority
+            sizes="100vw"
+            className="select-none pointer-events-none"
+            style={{ objectFit: 'cover', objectPosition: C.imageObjectPosition }}
           />
         </motion.div>
 
@@ -132,124 +149,117 @@ export default function HeroIntro() {
 
         {/* ── Layer 4: Logo ── */}
         {/*
-          OUTER DIV: positioning only.
+          Outer div: screen positioning.
             top: logoMarkScreenY%  +  translateY(-logoMarkInSvgY%)
-            → anchors the M mark (not the logo top/bottom) at that screen line.
+            perspective: logoPerspective — creates 3D context for child rotateX.
 
-          MOTION.DIV: animation carrier — scale + opacity + transformOrigin.
-            All four child imgs inherit the same zoom and fade.
+          rotateX wrapper: logo starts tilted forward (as if lying on the ground).
+            Straightens to 0deg by logoStraightenRange[1]. Framer Motion clamps
+            automatically — stays upright for the rest of the interaction.
 
-          CHILD IMG STACKING (DOM order = paint order):
-            A — far shadow:     brightness(0) silhouette, blurred 28px, offset (+4,+14)px
-                                The shadow center lands 14px below each letterform base.
-                                28px blur extends the dark zone ~42px below the glyph bottom.
-                                Clearly visible dark region below+right of every letterform.
+          y wrapper: vertical drift — OUTSIDE the scale element so y is not
+            amplified by the zoom factor.
 
-            B — contact shadow: brightness(0) silhouette, blurred 3px,  offset (+2,+8)px
-                                8px offset = crisp dark ledge is visibly exposed below
-                                each glyph before the 3px blur softens the edge.
-                                Reads as a hard cast shadow — the primary lift signal.
-
-            C — main logo:      position:relative (sizes the container), crisp.
-                                brightness/contrast boost = slightly front-lit.
-
-            D — highlight:      brightness(3) ≈ near-white, blurred 6px, offset (-2,-6)px
-                                Shifts UP and LEFT — opposite direction from the shadow.
-                                Warm rim on the upper-left surfaces of the letterforms.
-                                At 0.22 opacity it is clearly perceptible as a lit edge.
-
-          The combination of shadow (lower-right) and highlight (upper-left) creates
-          an unambiguous light direction that the eye reads as spatial lift.
+          Scale div: animation carrier — scale + opacity + transformOrigin.
+            All four child imgs share the same zoom and fade.
 
           *** To reposition the logo: change logoMarkScreenY in config.ts ***
               Then update vignetteCenter Y to match.
+          *** To adjust tilt: change logoInitialRotateX / logoStraightenRange ***
         */}
         <div
           className="absolute left-0 right-0 flex justify-center pointer-events-none"
           style={{
-            top:       `${C.logoMarkScreenY}%`,
-            transform: `translateY(-${C.logoMarkInSvgY}%)`,
+            top:         `${C.logoMarkScreenY}%`,
+            transform:   `translateY(-${C.logoMarkInSvgY}%)`,
+            perspective: `${C.logoPerspective}px`,
           }}
         >
-          {/* Vertical drift wrapper — outside the scale element so y is not zoom-amplified */}
-          <motion.div className="w-full flex justify-center" style={{ y: logoY }}>
+          {/* Perspective tilt — logo rises from ground plane to upright */}
           <motion.div
-            className="relative w-[72vw] sm:w-[44vw] md:w-[32vw]"
-            style={{
-              scale:           logoScale,
-              opacity:         logoOpacity,
-              transformOrigin: `${C.logoMarkInSvgX} ${C.logoMarkInSvgY}%`,
-            }}
+            className="w-full flex justify-center"
+            style={{ rotateX: logoRotateX }}
           >
+            {/* Vertical drift wrapper — outside scale so y is not zoom-amplified */}
+            <motion.div className="w-full flex justify-center" style={{ y: logoY }}>
+              <motion.div
+                className="relative w-[72vw] sm:w-[44vw] md:w-[32vw]"
+                style={{
+                  scale:           logoScale,
+                  opacity:         logoOpacity,
+                  transformOrigin: `${C.logoMarkInSvgX} ${C.logoMarkInSvgY}%`,
+                }}
+              >
 
-            {/* A — Far shadow: wide soft cast shadow */}
-            <img
-              aria-hidden
-              src="/logo.svg"
-              width={841}
-              height={595}
-              draggable={false}
-              style={{
-                position:  'absolute',
-                inset:     0,
-                width:     '100%',
-                height:    '100%',
-                filter:    `blur(${C.logoShadowFarBlur}px) brightness(0)`,
-                opacity:   C.logoShadowFarOpacity,
-                transform: `translate(${C.logoShadowFarOffsetX}px, ${C.logoShadowFarOffsetY}px)`,
-              }}
-            />
+                {/* A — Far shadow: soft atmospheric grounding */}
+                <img
+                  aria-hidden
+                  src="/logo.svg"
+                  width={841}
+                  height={595}
+                  draggable={false}
+                  style={{
+                    position:  'absolute',
+                    inset:     0,
+                    width:     '100%',
+                    height:    '100%',
+                    filter:    `blur(${C.logoShadowFarBlur}px) brightness(0)`,
+                    opacity:   C.logoShadowFarOpacity,
+                    transform: `translate(${C.logoShadowFarOffsetX}px, ${C.logoShadowFarOffsetY}px)`,
+                  }}
+                />
 
-            {/* B — Contact shadow: tight crisp lift edge */}
-            <img
-              aria-hidden
-              src="/logo.svg"
-              width={841}
-              height={595}
-              draggable={false}
-              style={{
-                position:  'absolute',
-                inset:     0,
-                width:     '100%',
-                height:    '100%',
-                filter:    `blur(${C.logoShadowContactBlur}px) brightness(0)`,
-                opacity:   C.logoShadowContactOpacity,
-                transform: `translate(${C.logoShadowContactOffsetX}px, ${C.logoShadowContactOffsetY}px)`,
-              }}
-            />
+                {/* B — Contact shadow: tight lift edge */}
+                <img
+                  aria-hidden
+                  src="/logo.svg"
+                  width={841}
+                  height={595}
+                  draggable={false}
+                  style={{
+                    position:  'absolute',
+                    inset:     0,
+                    width:     '100%',
+                    height:    '100%',
+                    filter:    `blur(${C.logoShadowContactBlur}px) brightness(0)`,
+                    opacity:   C.logoShadowContactOpacity,
+                    transform: `translate(${C.logoShadowContactOffsetX}px, ${C.logoShadowContactOffsetY}px)`,
+                  }}
+                />
 
-            {/* C — Main logo: crisp, slightly front-lit */}
-            <img
-              src="/logo.svg"
-              alt="JEME"
-              width={841}
-              height={595}
-              draggable={false}
-              className="relative w-full h-auto"
-              style={{
-                filter: `brightness(${C.logoBrightness}) contrast(${C.logoContrast})`,
-              }}
-            />
+                {/* C — Main logo: crisp, slightly front-lit */}
+                <img
+                  src="/logo.svg"
+                  alt="JEME"
+                  width={841}
+                  height={595}
+                  draggable={false}
+                  className="relative w-full h-auto"
+                  style={{
+                    filter: `brightness(${C.logoBrightness}) contrast(${C.logoContrast})`,
+                  }}
+                />
 
-            {/* D — Highlight: warm rim on upper-left surfaces */}
-            <img
-              aria-hidden
-              src="/logo.svg"
-              width={841}
-              height={595}
-              draggable={false}
-              style={{
-                position:  'absolute',
-                inset:     0,
-                width:     '100%',
-                height:    '100%',
-                filter:    `blur(${C.logoHighlightBlur}px) brightness(3)`,
-                opacity:   C.logoHighlightOpacity,
-                transform: `translate(${C.logoHighlightOffsetX}px, ${C.logoHighlightOffsetY}px)`,
-              }}
-            />
+                {/* D — Highlight: warm rim on upper-left surfaces */}
+                <img
+                  aria-hidden
+                  src="/logo.svg"
+                  width={841}
+                  height={595}
+                  draggable={false}
+                  style={{
+                    position:  'absolute',
+                    inset:     0,
+                    width:     '100%',
+                    height:    '100%',
+                    filter:    `blur(${C.logoHighlightBlur}px) brightness(3)`,
+                    opacity:   C.logoHighlightOpacity,
+                    transform: `translate(${C.logoHighlightOffsetX}px, ${C.logoHighlightOffsetY}px)`,
+                  }}
+                />
 
-          </motion.div>
+              </motion.div>
+            </motion.div>
           </motion.div>
         </div>
 
