@@ -45,7 +45,7 @@ export const HERO_CONFIG = {
   //   → Deeper field:     logoPerspective ↓ (e.g. 600)
   logoInitialRotateX:  40,                            // degrees — forward tilt at scroll=0
   logoPerspective:     900,                           // px — 3D perspective depth
-  logoStraightenRange: [0, 0.20] as [number, number], // scroll range over which tilt resolves
+  logoStraightenRange: [0, 0.40] as [number, number], // scroll range over which tilt resolves
 
   // ─── Logo zoom ─────────────────────────────────────────────────────────────
   // Restrained early / explosive late. The logo remains largely legible until
@@ -154,7 +154,7 @@ export const HERO_CONFIG = {
   //
   //   → More of the top:    decrease Y (e.g. '50% 50%')
   //   → More of the bottom: increase Y (e.g. '50% 85%')
-  imageObjectPosition: '50% 70%',
+  imageObjectPosition: '50% 85%', // Make the second number 70% if the non-smiling image is used
   imageScaleStart: 1,
   imageScaleRange: [0, 0.65] as [number, number],
   imageScaleMax:   1.12,
