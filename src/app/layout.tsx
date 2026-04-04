@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     // production domain before launch, or social previews will not work.
     images: [
       {
-        url:    '/images/team-hero.jpg',
+        url:    '/images/team-hero-smile.jpg',
         width:  3840,
         height: 2160,
         alt:    'JEME team',
