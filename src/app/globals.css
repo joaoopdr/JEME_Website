@@ -17,14 +17,27 @@
 
 html {
   scroll-behavior: auto;
-  /* Dark background prevents white overscroll flash at the top of the page
-     (Mac elastic scroll / iOS rubber-band pull-up above position 0). */
+  /*
+   * overscroll-behavior-y: none — primary fix.
+   * Instructs the browser not to perform elastic/rubber-band scroll beyond
+   * document bounds. The bounce effect never triggers, so no background area
+   * is ever exposed. Supported in Chrome 63+, Firefox 59+, Safari 16+.
+   *
+   * background-color — fallback for Safari < 16.
+   * In older Safari the property is ignored and elastic scroll still happens;
+   * the dark colour ensures the exposed area matches the hero rather than
+   * flashing white.
+   */
+  overscroll-behavior-y: none;
   background-color: #1d1d1b;
 }
 
 body {
   color: var(--color-brand-text);
-  background: #ffffff;
+  /* Dark background: covers below-bottom overscroll on browsers that paint the
+     body background there (some Chromium versions). See html comment above. */
+  background: #1d1d1b;
+  overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

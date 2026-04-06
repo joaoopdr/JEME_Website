@@ -93,7 +93,7 @@ export const HERO_CONFIG = {
   logoVerticalShiftProgress: [0,     0.25,   0.50,   0.65  ] as number[],
   logoVerticalShiftOutput:   ['0vh', '-20vh', '-40vh', '-50vh'] as string[],
 
-  // ─── Logo depth: layered shadow + highlight stack ──────────────────────────
+  // ─── Logo depth: layered shadow stack ─────────────────────────────────────
   // Offsets are intentionally small — the effect should read as a subtle
   // grounding cue, not a detached floating shadow.
   //
@@ -115,15 +115,6 @@ export const HERO_CONFIG = {
   logoShadowContactOffsetY: 3,    // px
   logoShadowContactBlur:    2,    // px
   logoShadowContactOpacity: 0.45, // 0–1
-
-  // ── Highlight copy ──────────────────────────────────────────────────────────
-  //   → Stronger rim:  logoHighlightOpacity ↑ (toward 0.40)
-  //   → Softer bloom:  logoHighlightBlur ↑ (toward 12)
-  //   → Disable:       logoHighlightOpacity = 0
-  logoHighlightOffsetX: -2,   // px — leftward shift
-  logoHighlightOffsetY: -6,   // px — upward shift
-  logoHighlightBlur:     6,   // px
-  logoHighlightOpacity:  0.30, // 0–1 — slightly stronger for initial contrast
 
   // ── Main logo image filter ──────────────────────────────────────────────────
   logoBrightness: 1.12,

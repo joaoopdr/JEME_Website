@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { HERO_CONFIG as C } from './config';
 
@@ -18,11 +18,16 @@ import { HERO_CONFIG as C } from './config';
  *   A static full-screen section: photo + centred logo. No scroll behaviour.
  *
  * Layer stack (bottom → top):
- *   1.  Team photograph — Next.js Image (optimized, priority, quality 85)
+ *   1.  Team photograph — Next.js Image (optimized, priority, quality 100)
  *   2.  Radial vignette — scroll-animated spotlight
  *   3.  Brand-red fill — scroll-animated
  *   4.  Logo — perspective context → rotateX → y drift → scale/opacity
  *   5.  Content reveal — opacity + y
+ *
+ * Image-load gating:
+ *   The sticky container is opacity:0 until the photo fires onLoad, then
+ *   opacity:1 with a 150 ms ease-in. This prevents the logo appearing over
+ *   an unloaded background without any artificial overlay or long delay.
  */
 export default function HeroIntro() {
   // Must be called unconditionally (Rules of Hooks).
@@ -30,6 +35,7 @@ export default function HeroIntro() {
   const prefersReducedMotion = useReducedMotion();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -137,14 +143,25 @@ export default function HeroIntro() {
 
   // ── Full scroll-driven animation ──────────────────────────────────────────
   return (
-    // bg-black: prevents white overscroll flash (Mac elastic scroll / iOS rubber-band).
     <div
       ref={containerRef}
       style={{ height: `${C.scrollHeightVh}vh` }}
       className="relative bg-black"
     >
       {/* h-dvh: dynamic viewport height — correct on iOS Safari (excludes address bar) */}
-      <div className="sticky top-0 h-dvh overflow-hidden">
+      {/*
+        opacity gating: the entire sticky frame stays invisible until the photo
+        fires onLoad. Transition is only applied in the reveal direction (none→1)
+        so there is no artificial delay before the image is ready, and no
+        overlay element that lingers afterward.
+      */}
+      <div
+        className="sticky top-0 h-dvh overflow-hidden bg-black"
+        style={{
+          opacity:    imageLoaded ? 1 : 0,
+          transition: imageLoaded ? 'opacity 150ms ease-in' : 'none',
+        }}
+      >
 
         {/* ── Layer 1: Team photograph ── */}
         {/*
@@ -166,6 +183,7 @@ export default function HeroIntro() {
             sizes="100vw"
             className="select-none pointer-events-none"
             style={{ objectFit: 'cover', objectPosition: C.imageObjectPosition }}
+            onLoad={() => setImageLoaded(true)}
           />
         </motion.div>
 
@@ -274,26 +292,6 @@ export default function HeroIntro() {
                   className="relative w-full h-auto"
                   style={{
                     filter: `brightness(${C.logoBrightness}) contrast(${C.logoContrast})`,
-                  }}
-                />
-
-                {/* D — Highlight */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  aria-hidden
-                  alt=""
-                  src="/logo.svg"
-                  width={841}
-                  height={595}
-                  draggable={false}
-                  style={{
-                    position:  'absolute',
-                    inset:     0,
-                    width:     '100%',
-                    height:    '100%',
-                    filter:    `blur(${C.logoHighlightBlur}px) brightness(3)`,
-                    opacity:   C.logoHighlightOpacity,
-                    transform: `translate(${C.logoHighlightOffsetX}px, ${C.logoHighlightOffsetY}px)`,
                   }}
                 />
 
